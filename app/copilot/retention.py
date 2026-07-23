@@ -1,4 +1,9 @@
-"""Conversation retention: records older than 30 days are deleted nightly."""
+# Copyright 2026 Acme Inc. Licensed under Apache-2.0.
+"""Conversation retention: records older than 30 days are deleted nightly.
+
+Scheduled by the platform cron against the worker container. The 30-day
+window is an operating fact recipients of Acme's security answers rely on.
+"""
 
 import datetime as dt
 

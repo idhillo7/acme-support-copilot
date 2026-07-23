@@ -1,4 +1,10 @@
-"""Payment-shaped strings never reach a model provider."""
+# Copyright 2026 Acme Inc. Licensed under Apache-2.0.
+"""Payment-shaped strings never reach a model provider.
+
+Applied to every conversation turn before the provider call in
+app.copilot.assistant — this is the enforcement point for the promise that
+no payment data reaches the model path.
+"""
 
 import re
 

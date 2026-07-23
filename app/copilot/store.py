@@ -1,4 +1,9 @@
-"""Conversation store: durable record of conversations and drafted replies."""
+# Copyright 2026 Acme Inc. Licensed under Apache-2.0.
+"""Conversation store: durable record of conversations and drafted replies.
+
+Backs both the HTTP surface and the draft worker. Message bodies live only
+here, under the 30-day retention rule in app.copilot.retention.
+"""
 
 import os
 from contextlib import contextmanager

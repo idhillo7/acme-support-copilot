@@ -1,4 +1,11 @@
-"""Background worker: drafts replies for queued support conversations."""
+# Copyright 2026 Acme Inc. Licensed under Apache-2.0.
+"""Background worker: drafts replies for queued support conversations.
+
+Runs as the `worker` service in docker-compose.yml. Each poll drains up to
+ten queued conversations, drafts through app.copilot.assistant (the same
+redaction and confidence rules as the synchronous path), and records the
+draft durably before marking the queue row done.
+"""
 
 import logging
 import time
