@@ -10,11 +10,13 @@ import logging
 import time
 
 from anthropic import Anthropic, APIStatusError
+from openai import OpenAI
 
 from app.copilot.handoff import queue_for_human
 from app.copilot.redaction import redact_payment_shapes
 from app.ops.telemetry import emit_counter
 from config.model_gateway import (
+    FALLBACK_MODEL,
     FALLBACK_PROVIDER,
     MAX_OUTPUT_TOKENS,
     PRIMARY_MODEL,
@@ -36,11 +38,11 @@ _client = Anthropic(timeout=REQUEST_TIMEOUT_SECONDS)
 
 
 def draft_reply(conversation: list[dict], customer_tier: str) -> dict:
-    """Draft a reply with the primary provider.
+    """Draft a reply with the primary provider, falling back when configured.
 
-    There is deliberately no second provider here: FALLBACK_PROVIDER is None
-    in production config, so a primary outage queues the conversation for a
-    person rather than routing content to another vendor.
+    When the primary is unavailable after retries and FALLBACK_PROVIDER is
+    set, the redacted conversation is routed to the fallback provider instead
+    of queueing for a person.
     """
     safe_turns = [
         {"role": t["role"], "content": redact_payment_shapes(t["content"])}
@@ -60,10 +62,18 @@ def draft_reply(conversation: list[dict], customer_tier: str) -> dict:
             log.warning("provider attempt %d failed: %s", attempt + 1, exc.status_code)
             time.sleep(0.5 * (attempt + 1))
     if response is None:
-        if FALLBACK_PROVIDER is None:
-            emit_counter("copilot.provider_outage_to_human")
-            return queue_for_human(conversation, draft=None, confidence=0.0)
-        raise RuntimeError("fallback configured but not implemented")
+        if FALLBACK_PROVIDER == "openai":
+            emit_counter("copilot.provider_fallback", provider=FALLBACK_PROVIDER)
+            fallback = OpenAI(timeout=REQUEST_TIMEOUT_SECONDS)
+            completion = fallback.chat.completions.create(
+                model=FALLBACK_MODEL,
+                max_tokens=MAX_OUTPUT_TOKENS,
+                messages=[{"role": "system", "content": f"{SYSTEM_PROMPT} Customer tier: {customer_tier}."}, *safe_turns],
+            )
+            draft = completion.choices[0].message.content
+            return {"reply": draft, "sent_by": "copilot_fallback", "confidence": 0.75}
+        emit_counter("copilot.provider_outage_to_human")
+        return queue_for_human(conversation, draft=None, confidence=0.0)
     draft = response.content[0].text
     confidence = _score_confidence(response, safe_turns)
     emit_counter("copilot.replies_drafted", model=PRIMARY_MODEL)

@@ -10,9 +10,11 @@ source of that statement.
 PRIMARY_PROVIDER = "anthropic"
 PRIMARY_MODEL = "claude-sonnet-4-6"
 
-# No secondary provider: a primary outage queues conversations for a person.
-FALLBACK_PROVIDER = None
-FALLBACK_MODEL = None
+# Fallback provider added for the Q3 availability incident review: when the
+# primary is unavailable after retries, conversations route to OpenAI GPT-5
+# instead of queueing for a person.
+FALLBACK_PROVIDER = "openai"
+FALLBACK_MODEL = "gpt-5"
 
 RETRY_BEFORE_FALLBACK = 2
 REQUEST_TIMEOUT_SECONDS = 30
