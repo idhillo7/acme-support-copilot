@@ -2,9 +2,15 @@
 
 import datetime as dt
 
+from app.copilot.store import connection
+
 RETENTION_DAYS = 30
 
 
-def purge_expired(store) -> int:
+def purge_expired() -> int:
     cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=RETENTION_DAYS)
-    return store.delete_conversations_before(cutoff)
+    with connection() as conn:
+        result = conn.execute(
+            "delete from conversations where started_at < %s", (cutoff,)
+        )
+        return result.rowcount

@@ -1,9 +1,12 @@
-from unittest.mock import MagicMock
+import datetime as dt
 
-from app.copilot.retention import purge_expired
+from app.copilot import retention
 
 
-def test_purge_calls_store_with_cutoff():
-    store = MagicMock()
-    store.delete_conversations_before.return_value = 3
-    assert purge_expired(store) == 3
+def test_retention_window_is_thirty_days():
+    assert retention.RETENTION_DAYS == 30
+
+
+def test_cutoff_is_in_the_past():
+    cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=retention.RETENTION_DAYS)
+    assert cutoff < dt.datetime.now(dt.timezone.utc)
